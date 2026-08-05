@@ -106,4 +106,17 @@ def _result(
     )
 
 
+class PolicyAgent:
+    """Coordinator-facing adapter for the deterministic policy engine."""
+
+    @staticmethod
+    def run(
+        case: Any,
+        order_seller: Any,
+        delivery: Any,
+        payment: Any,
+    ) -> Any:
+        return decide_policy(order_seller, delivery, payment)
+
+
 run = decide_policy
