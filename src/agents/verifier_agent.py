@@ -112,4 +112,23 @@ def verify_and_serialize(
     }
 
 
+class VerifierAgent:
+    """Coordinator-facing adapter that returns the frozen CaseOutput contract."""
+
+    @staticmethod
+    def run(
+        case: Any,
+        facts: Any,
+        order_seller: Any,
+        delivery: Any,
+        payment: Any,
+        decision: Any,
+    ) -> Any:
+        payload = verify_and_serialize(
+            case, facts, order_seller, payment, delivery, decision,
+        )
+        from src.contracts import CaseOutput
+        return CaseOutput(**payload)
+
+
 run = verify_and_serialize
