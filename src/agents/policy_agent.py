@@ -65,13 +65,13 @@ def decide_policy(
     if delivered_late and seller_late:
         seller_id = late_sellers[0] if late_sellers else "UNKNOWN_SELLER"
         return _result(
-            "late_delivery_seller", "SELLER_HANDOFF_AFTER_LIMIT", 0.90,
+            "late_delivery_seller", "SELLER_HANDOFF_AFTER_LIMIT", 0.95,
             [{"party_type": "seller", "party_id": seller_id}],
             freight_total, "refund_freight",
         )
     if delivered_late:
         return _result(
-            "late_delivery_logistics", "CARRIER_DELIVERED_AFTER_ESTIMATE", 0.90,
+            "late_delivery_logistics", "CARRIER_DELIVERED_AFTER_ESTIMATE", 0.95,
             [{"party_type": "logistics_provider", "party_id": "LOGISTICS_PROVIDER"}],
             freight_total, "refund_freight",
         )
