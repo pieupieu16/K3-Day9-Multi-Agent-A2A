@@ -48,6 +48,23 @@ def _refund(primary_issue: str, payment: Any) -> float:
     return _money(compute_refund(primary_issue, payment))
 
 
+def _bounded_evidence(candidates: list[str], facts: Any) -> list[str]:
+    valid = [
+        entry
+        for entry in dict.fromkeys(candidates)
+        if _is_valid_evidence(entry, facts)
+    ]
+    selected: list[str] = []
+    for prefix in ("order:", "policy:", "item:", "payment:", "seller:"):
+        representative = next(
+            (entry for entry in valid if entry.startswith(prefix)), None
+        )
+        if representative is not None:
+            selected.append(representative)
+    selected.extend(entry for entry in valid if entry not in selected)
+    return selected[:10]
+
+
 def verify_and_serialize(
     case: Any,
     facts: Any,
@@ -64,19 +81,34 @@ def verify_and_serialize(
         delivery = delivery_or_decision
     order_id = _value(facts, "order_id", _value(case, "claimed_order_id", "")) or ""
     items = list(_value(facts, "items", []) or [])
-    item_ids = list(_value(order_seller, "item_ids", []) or [])[:5]
-    seller_ids = list(_value(order_seller, "seller_ids", []) or [])[:5]
-    payment_ids = list(_value(payment, "payment_ids", []) or [])[:5]
+    payments = list(_value(facts, "payments", []) or [])
+    actual_item_ids = {
+        f"{order_id}:{_value(item, 'order_item_id')}" for item in items
+    }
+    actual_seller_ids = {str(_value(item, "seller_id", "")) for item in items}
+    actual_payment_ids = {
+        f"{order_id}:{_value(row, 'payment_sequential')}" for row in payments
+    }
+    item_ids = list(dict.fromkeys(
+        entry for entry in _value(order_seller, "item_ids", [])
+        if entry in actual_item_ids
+    ))[:5]
+    seller_ids = list(dict.fromkeys(
+        entry for entry in _value(order_seller, "seller_ids", [])
+        if entry in actual_seller_ids
+    ))[:5]
+    payment_ids = list(dict.fromkeys(
+        entry for entry in _value(payment, "payment_ids", [])
+        if entry in actual_payment_ids
+    ))[:5]
     primary_issue = _value(decision, "primary_issue", "unsupported_late_claim")
     evidence = list(_value(order_seller, "evidence", []) or [])
     evidence += list(_value(delivery, "evidence", []) or [])
     evidence += list(_value(payment, "evidence", []) or [])
     evidence += list(_value(decision, "evidence", []) or [])
-    evidence = [entry for entry in dict.fromkeys(evidence) if _is_valid_evidence(entry, facts)][:10]
-
     if order_id and f"order:{order_id}" not in evidence:
         evidence.insert(0, f"order:{order_id}")
-    evidence = [entry for entry in evidence if _is_valid_evidence(entry, facts)][:10]
+    evidence = _bounded_evidence(evidence, facts)
     item_total = _money(_value(payment, "item_total", sum(float(_value(item, "price", 0.0) or 0.0) for item in items)))
     freight_total = _money(_value(payment, "freight_total", sum(float(_value(item, "freight_value", 0.0) or 0.0) for item in items)))
     payment_total = _money(_value(payment, "payment_total", 0.0))
@@ -91,7 +123,7 @@ def verify_and_serialize(
             "confidence": confidence,
         },
         "affected_entities": {
-            "order_ids": [order_id] if order_id else [],
+            "order_ids": [order_id] if order_id and _value(facts, "found", False) else [],
             "item_ids": item_ids,
             "seller_ids": seller_ids,
             "payment_ids": payment_ids,

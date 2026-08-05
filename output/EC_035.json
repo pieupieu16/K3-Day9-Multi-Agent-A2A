@@ -3,7 +3,7 @@
   "assessment": {
     "primary_issue": "unsupported_late_claim",
     "case_status": "no_action",
-    "confidence": 0.9
+    "confidence": 0.85
   },
   "affected_entities": {
     "order_ids": [
@@ -13,7 +13,7 @@
       "2478ddd1d1395639b71cf0d498d8dbf6:1"
     ],
     "seller_ids": [
-      "seller_01"
+      "4e17c65a516f69d023a2ae78b84f28d6"
     ],
     "payment_ids": [
       "2478ddd1d1395639b71cf0d498d8dbf6:1"
@@ -30,15 +30,16 @@
   },
   "evidence_ids": [
     "order:2478ddd1d1395639b71cf0d498d8dbf6",
-    "seller:seller_01",
+    "policy:DELIVERY_WITHIN_ESTIMATE",
+    "item:2478ddd1d1395639b71cf0d498d8dbf6:1",
     "payment:2478ddd1d1395639b71cf0d498d8dbf6:1",
-    "policy:DELIVERY_WITHIN_ESTIMATE"
+    "seller:4e17c65a516f69d023a2ae78b84f28d6"
   ],
   "financial_resolution": {
     "currency": "BRL",
-    "item_total_brl": 80.0,
-    "freight_total_brl": 15.0,
-    "payment_total_brl": 95.0,
+    "item_total_brl": 30.0,
+    "freight_total_brl": 11.85,
+    "payment_total_brl": 41.85,
     "recommended_refund_brl": 0.0
   },
   "resolution_actions": [

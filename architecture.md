@@ -12,32 +12,42 @@ Tài liệu này mô tả quy trình thực hiện phần việc **Coordinator +
 Hệ thống xử lý 50 case khiếu nại thương mại điện tử từ `EC_001.json` đến `EC_050.json` bằng kiến trúc **Multi-Agent Handoff & Specialist Collaboration**. Hệ thống phân tách thành 6 Agents chuyên biệt để đối chiếu dữ liệu Olist CSV, xác định bên chịu trách nhiệm, tính toán khoản hoàn tiền và tạo bằng chứng hợp lệ.
 
 ```mermaid
-graph TD
-    Input[Input Case EC_xxx.json] --> Coordinator[1. Coordinator Agent]
-    CSV[(Olist CSV Data Engine)] <--> Coordinator
-    
-    Coordinator -- "Yêu cầu kiểm tra Đơn & Vận chuyển" --> OrderAgent[2. Order & Logistics Agent]
-    Coordinator -- "Yêu cầu đối soát Tài chính & Payment" --> PaymentAgent[3. Payment Agent]
-    
-    OrderAgent -- "Handoff: Mốc giao hàng, Seller handoff & Trạng thái" --> PolicyAgent[4. Policy Agent]
-    PaymentAgent -- "Handoff: Tổng payment, Split payment & Sai số" --> PolicyAgent
-    
-    PolicyAgent -- "Đề xuất: Primary Issue, Refund, Actions" --> VerifierAgent[5. Verifier Agent]
-    
-    VerifierAgent -- "Xác minh hợp lệ (Schema & Evidence)" --> OutputJSON[Output EC_xxx.json]
-    Coordinator <--> TraceLogger[6. Traceability Logger]
+flowchart TD
+    Input[Input Case EC_xxx.json] --> Coordinator[Coordinator Agent]
+    Coordinator --> DataLayer[Olist Data Layer]
+    CSV[(4 Olist CSV indexes)] --> DataLayer
+    DataLayer --> Coordinator
+
+    Coordinator -- "fan-out: OrderFacts" --> OrderAgent[Order and Seller Agent]
+    Coordinator -- "fan-out: OrderFacts" --> PaymentAgent[Payment Agent]
+    OrderAgent -- "OrderSellerFinding" --> Coordinator
+    PaymentAgent -- "PaymentFinding" --> Coordinator
+
+    Coordinator -- "OrderFacts + OrderSellerFinding" --> DeliveryAgent[Delivery Agent]
+    DeliveryAgent -- "DeliveryFinding" --> Coordinator
+
+    Coordinator -- "3 domain findings" --> PolicyAgent[Policy Agent]
+    PolicyAgent -- "PolicyDecision" --> Coordinator
+    Coordinator -- "facts + findings + decision" --> VerifierAgent[Verifier Agent]
+    VerifierAgent -- "CaseOutput" --> Coordinator
+
+    Coordinator --> Runner[Runner ghi JSON nguyên tử]
+    Runner --> OutputJSON[output/EC_xxx.json]
+    Coordinator --> TraceLogger[Traceability Logger]
     TraceLogger --> TraceFile[trace.jsonl]
 ```
 
 ### Agent Roles & Permissions Matrix
 | Agent | Vai trò chính | Thao tác dữ liệu (CSV) | Quyền hạn Output |
 | :--- | :--- | :--- | :--- |
-| **1. Coordinator Agent** | Nhận case, điều phối & tổng hợp | Đọc `input/EC_xxx.json` | Giao task, nhận handoff, chuyển giao Policy |
-| **2. Order & Logistics Agent** | Kiểm tra trạng thái đơn, seller, mốc giao | Đọc `orders`, `order_items`, `sellers`, `customers` | Sinh Evidence `order:*`, `item:*`, `seller:*` |
-| **3. Payment Agent** | Đối soát thanh toán & split payment | Đọc `orders`, `order_items`, `order_payments` | Sinh Evidence `payment:*`, tính `payment_total` |
-| **4. Policy Agent** | Áp dụng quy tắc `EC_POLICY_V1` | Đọc bảng quy tắc nghiệp vụ | Xác định `primary_issue`, refund & actions |
-| **5. Verifier Agent** | QA, schema validation, zero false positives | Đọc đối chiếu toàn bộ CSVs | Duyệt JSON output, xuất file `output/EC_xxx.json` |
-| **6. Traceability Logger** | Ghi vết hệ thống | Đọc log luồng trao đổi | Xuất file `trace.jsonl` |
+| **Coordinator Agent** | Nhận case, điều phối và tổng hợp | `CaseInput`, `OrderFacts` và các finding | Giao task, nhận handoff, trả `CaseOutput` |
+| **Olist Data Layer** | Load CSV một lần và index theo `order_id` | `orders`, `order_items`, `order_payments`, `sellers` | `OrderFacts` là nguồn sự thật duy nhất |
+| **Order & Seller Agent** | Kiểm tra trạng thái, item, seller và seller handoff | Chỉ dùng các trường order/item cần thiết trong `OrderFacts` | `OrderSellerFinding`, evidence `order:*`, `item:*`, `seller:*` |
+| **Delivery Agent** | So sánh thời điểm giao với estimated date | Chỉ dùng timestamp và `OrderSellerFinding` | `DeliveryFinding` |
+| **Payment Agent** | Đối soát payment và split payment bằng `Decimal` | Chỉ dùng item amount và payment rows | `PaymentFinding`, evidence `payment:*` |
+| **Policy Agent** | Áp dụng `EC_POLICY_V1` đúng thứ tự ưu tiên | Ba domain finding, không đọc CSV | `PolicyDecision` |
+| **Verifier Agent** | Ground entity/evidence, tính lại refund, chặn sai schema | Facts, findings và decision | `CaseOutput` đã xác minh |
+| **Traceability Logger** | Ghi vết từng bước của lượt chạy mới nhất | Event từ Coordinator | Hai bản `trace.jsonl` đồng nhất |
 
 ---
 

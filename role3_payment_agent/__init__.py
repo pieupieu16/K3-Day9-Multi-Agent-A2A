@@ -1,6 +1,6 @@
 """Public API for Role 3: Payment Agent and financial resolution."""
 
-from .agent import PaymentAgent, analyze_payment
+from .payment_agent import PaymentAgent, analyze_payment
 from .financial_resolution import (
     FinancialTotals,
     RECONCILIATION_TOLERANCE,

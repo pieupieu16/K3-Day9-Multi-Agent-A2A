@@ -6,20 +6,22 @@ Bắt buộc theo README: trace.jsonl chứa duy nhất lượt chạy mới nh�
 import os
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Optional
 from src.llm_client import MODEL_NAME
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
 TRACE_PATHS = [
-    os.path.join(os.getcwd(), "logging", "trace.jsonl"),
-    os.path.join(os.getcwd(), "trace.jsonl"),
+    ROOT_DIR / "logging" / "trace.jsonl",
+    ROOT_DIR / "trace.jsonl",
 ]
 
 
 def reset_trace_file() -> None:
     """Xóa / reset toàn bộ file trace.jsonl trước lượt chạy mới."""
     for path in TRACE_PATHS:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8") as f:
             pass  # Truncate file
 
 
@@ -52,8 +54,8 @@ def trace_event(
 
     for path in TRACE_PATHS:
         try:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "a", encoding="utf-8") as f:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as f:
                 f.write(line)
         except Exception as e:
             print(f"[Tracing Warning] Không thể ghi trace vào {path}: {e}")

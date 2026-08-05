@@ -142,7 +142,7 @@ def call_llm(
                     return json.loads(_get_mock_response(prompt, system_prompt))
 
         except Exception as e:
-            logger.warning(f"Lỗi kết nối Ollama API ({OLLAMA_BASE_URL}) lần {attempt}: {e}")
+            logger.warning(f"Lỗi kết nối Ollama API ({ollama_endpoint}) lần {attempt}: {e}")
             if attempt == MAX_RETRIES:
                 logger.warning("Không thể gọi Ollama. Tự động chuyển sang Mock Mode.")
                 raw_res = _get_mock_response(prompt, system_prompt)

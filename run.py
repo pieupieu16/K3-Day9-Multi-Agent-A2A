@@ -3,40 +3,27 @@ run.py — CLI Execution Runner chính điều hành pipeline Multi-Agent.
 Thực hiện quét 50 input, gọi Coordinator, ghi log trace và nộp output JSON.
 """
 import os
-import sys
-import glob
 import json
 import time
 import argparse
 import tempfile
+from pathlib import Path
 from typing import List
 
 from src.contracts import CaseInput
 from src.coordinator import Coordinator
 from src.tracing import reset_trace_file
 
+ROOT_DIR = Path(__file__).resolve().parent
+EXPECTED_CASE_COUNT = 50
+
 
 def find_input_files() -> List[str]:
     """Tìm tất cả các file input EC_xxx.json trong folder input/ hoặc input/input/."""
-    candidates = []
-    
-    # Check input/
-    for p in glob.glob(os.path.join("input", "EC_*.json")):
-        candidates.append(p)
-        
-    # Check input/input/
-    for p in glob.glob(os.path.join("input", "input", "EC_*.json")):
-        candidates.append(p)
-        
-    # Deduplicate by filename
-    file_map = {}
-    for p in candidates:
-        fname = os.path.basename(p)
-        if fname not in file_map:
-            file_map[fname] = p
-            
-    sorted_files = sorted(file_map.values(), key=lambda x: os.path.basename(x))
-    return sorted_files
+    candidates = list((ROOT_DIR / "input").glob("EC_*.json"))
+    candidates += list((ROOT_DIR / "input" / "input").glob("EC_*.json"))
+    file_map = {path.name: path for path in reversed(candidates)}
+    return [str(file_map[name]) for name in sorted(file_map)]
 
 
 def save_atomic_json(output_path: str, data: dict) -> None:
@@ -51,7 +38,7 @@ def save_atomic_json(output_path: str, data: dict) -> None:
     os.replace(tmp_name, output_path)
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(description="Multi-Agent E-commerce Dispute Resolution Runner")
     parser.add_argument("--limit", type=int, default=None, help="Giới hạn số lượng case cần xử lý (ví dụ: --limit 5)")
     args = parser.parse_args()
@@ -68,7 +55,14 @@ def main():
     input_files = find_input_files()
     if not input_files:
         print("[WARNING] Khong tim thay file input nao trong input/ hoac input/input/!")
-        sys.exit(1)
+        return 1
+
+    if args.limit is None and len(input_files) != EXPECTED_CASE_COUNT:
+        print(
+            f"[ERROR] Full run requires exactly {EXPECTED_CASE_COUNT} cases; "
+            f"found {len(input_files)}."
+        )
+        return 1
 
     if args.limit and args.limit > 0:
         input_files = input_files[: args.limit]
@@ -91,7 +85,7 @@ def main():
             case_input = CaseInput.from_dict(raw_data)
             output = coordinator.process_case(case_input)
             
-            output_path = os.path.join("output", fname)
+            output_path = str(ROOT_DIR / "output" / fname)
             save_atomic_json(output_path, output.to_dict())
             
             case_time = (time.time() - case_start) * 1000
@@ -108,7 +102,8 @@ def main():
     if len(input_files) > 0:
         print(f"Tong thoi gian: {total_elapsed:.2f} seconds ({total_elapsed/len(input_files)*1000:.1f} ms/case)")
     print("=" * 70)
+    return 0 if success_count == len(input_files) else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
