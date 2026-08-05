@@ -40,13 +40,13 @@
 
 ## 3. Kết quả theo vai trò
 
-| Nhiệm vụ đã thực hiện | File/hàm/artifact liên quan | Kết quả bàn giao          | Cách xác minh   |
+| Nhiệm vụ đã thực hiện | File/hàm/artifact liên quan | Kết quả bàn giao | Cách xác minh |
 | --------------------- | --------------------------- | ------------------------- | --------------- |
 | Khởi tạo Dataclass Contract | `src/contracts.py` | 9 Dataclass phủ 100% schema và findings | `python -c "import src.contracts"` |
 | Xây dựng LLM Client | `src/llm_client.py` | Wrapper `qwen2.5:7b` + Mock Mode | `python -c "import src.llm_client as l; l.call_llm('test')"` |
 | Điều phối Multi-Agent | `src/coordinator.py` | Luồng Handoff dispatch 5 agents | `python run.py --limit 5` |
 | Ghi Log truy vết | `src/tracing.py` | Log JSONL chuẩn hóa tại 2 vị trí | Kiểm tra `trace.jsonl` |
-| Đóng gói Solution | `output.zip` / `solution.zip` | Zip chứa đúng 50 JSON output | Check zip file / validate |
+| Đóng gói Solution | `output.zip` / `solution.zip` | Zip chứa đúng 50 JSON output | `python scripts/validate_output.py` / check zip |
 
 **Nêu một output cụ thể:**
 Bộ điều phối Coordinator đã chạy thành công 50/50 cases trong **0.25 giây** ($5.0$ ms/case), tạo ra đúng 50 file JSON chuẩn từ `EC_001.json` tới `EC_050.json` và 300 trace logs chi tiết cho lượt chạy mới nhất.
