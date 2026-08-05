@@ -1,2 +1,22 @@
 __pycache__/
 *.py[cod]
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Output Zips & temporary artifacts
+*.zip
+*.log
+scratch/
