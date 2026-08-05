@@ -41,6 +41,7 @@ class CoordinatorFixtureTests(unittest.TestCase):
             with self.subTest(order_id=order_id):
                 output = self.coordinator.process_case(_case(order_id))
                 self.assertEqual(expected_issue, output.assessment["primary_issue"])
+                self.assertEqual(1.0, output.assessment["confidence"])
                 self.assertEqual(
                     expected_refund,
                     output.financial_resolution["recommended_refund_brl"],
@@ -49,6 +50,19 @@ class CoordinatorFixtureTests(unittest.TestCase):
                     evidence.startswith("policy:")
                     for evidence in output.evidence_ids
                 ))
+                evidence_order = {
+                    "order": 0, "item": 1, "payment": 2, "seller": 3, "policy": 4,
+                }
+                evidence_ranks = [
+                    evidence_order[evidence.split(":", 1)[0]]
+                    for evidence in output.evidence_ids
+                ]
+                self.assertEqual(sorted(evidence_ranks), evidence_ranks)
+                payment_sequences = [
+                    int(payment_id.rsplit(":", 1)[1])
+                    for payment_id in output.affected_entities["payment_ids"]
+                ]
+                self.assertEqual(sorted(payment_sequences), payment_sequences)
 
     def test_no_items_has_empty_item_and_seller_entities(self) -> None:
         output = self.coordinator.process_case(_case("fixture_no_items"))

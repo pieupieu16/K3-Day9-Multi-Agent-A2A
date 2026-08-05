@@ -52,36 +52,36 @@ def decide_policy(
 
     if order_status == "canceled" and payment_total > 0:
         return _result(
-            "canceled_order_paid", "ORDER_CANCELED_AFTER_PAYMENT", 0.95,
+            "canceled_order_paid", "ORDER_CANCELED_AFTER_PAYMENT", 1.0,
             [{"party_type": "platform", "party_id": "OLIST_PLATFORM"}],
             payment_total, "issue_full_refund",
         )
     if order_status == "unavailable" and payment_total > 0:
         return _result(
-            "unavailable_order_paid", "ORDER_UNAVAILABLE_AFTER_PAYMENT", 0.95,
+            "unavailable_order_paid", "ORDER_UNAVAILABLE_AFTER_PAYMENT", 1.0,
             [{"party_type": "platform", "party_id": "OLIST_PLATFORM"}],
             payment_total, "issue_full_refund",
         )
     if delivered_late and seller_late:
         seller_id = late_sellers[0] if late_sellers else "UNKNOWN_SELLER"
         return _result(
-            "late_delivery_seller", "SELLER_HANDOFF_AFTER_LIMIT", 0.90,
+            "late_delivery_seller", "SELLER_HANDOFF_AFTER_LIMIT", 1.0,
             [{"party_type": "seller", "party_id": seller_id}],
             freight_total, "refund_freight",
         )
     if delivered_late:
         return _result(
-            "late_delivery_logistics", "CARRIER_DELIVERED_AFTER_ESTIMATE", 0.90,
+            "late_delivery_logistics", "CARRIER_DELIVERED_AFTER_ESTIMATE", 1.0,
             [{"party_type": "logistics_provider", "party_id": "LOGISTICS_PROVIDER"}],
             freight_total, "refund_freight",
         )
     if is_split and reconciled:
         return _result(
-            "valid_split_payment", "MULTIPLE_PAYMENTS_RECONCILED", 0.88,
+            "valid_split_payment", "MULTIPLE_PAYMENTS_RECONCILED", 1.0,
             [], 0.0, "explain_valid_split_payment",
         )
     return _result(
-        "unsupported_late_claim", "DELIVERY_WITHIN_ESTIMATE", 0.85,
+        "unsupported_late_claim", "DELIVERY_WITHIN_ESTIMATE", 1.0,
         [], 0.0, "reject_late_refund",
     )
 

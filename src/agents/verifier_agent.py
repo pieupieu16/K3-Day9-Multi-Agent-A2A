@@ -54,15 +54,15 @@ def _bounded_evidence(candidates: list[str], facts: Any) -> list[str]:
         for entry in dict.fromkeys(candidates)
         if _is_valid_evidence(entry, facts)
     ]
-    selected: list[str] = []
-    for prefix in ("order:", "policy:", "item:", "payment:", "seller:"):
-        representative = next(
-            (entry for entry in valid if entry.startswith(prefix)), None
-        )
-        if representative is not None:
-            selected.append(representative)
-    selected.extend(entry for entry in valid if entry not in selected)
-    return selected[:10]
+    data_evidence = [
+        entry
+        for prefix in ("order:", "item:", "payment:", "seller:")
+        for entry in valid
+        if entry.startswith(prefix)
+    ]
+    policy_evidence = [entry for entry in valid if entry.startswith("policy:")]
+    policy_evidence = policy_evidence[:10]
+    return data_evidence[: 10 - len(policy_evidence)] + policy_evidence
 
 
 def verify_and_serialize(
