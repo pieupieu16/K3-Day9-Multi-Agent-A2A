@@ -48,6 +48,44 @@ def _refund(primary_issue: str, payment: Any) -> float:
     return _money(compute_refund(primary_issue, payment))
 
 
+def _select_evidence_ids(
+    primary_issue: str,
+    order_id: str,
+    item_ids: list[str],
+    seller_ids: list[str],
+    late_seller_ids: list[str],
+    payment_ids: list[str],
+    decision_evidence: list[str],
+    facts: Any,
+) -> list[str]:
+    evidence: list[str] = []
+    if order_id:
+        evidence.append(f"order:{order_id}")
+
+    if primary_issue in {"canceled_order_paid", "unavailable_order_paid", "valid_split_payment"}:
+        evidence.extend(payment_ids)
+    elif primary_issue == "late_delivery_seller":
+        evidence.extend(item_ids)
+        evidence.extend([f"seller:{seller_id}" for seller_id in late_seller_ids if seller_id])
+    elif primary_issue == "late_delivery_logistics":
+        evidence.extend(item_ids)
+    elif primary_issue == "unsupported_late_claim":
+        evidence.extend(item_ids)
+        evidence.extend(payment_ids)
+    else:
+        evidence.extend(item_ids)
+        evidence.extend(payment_ids)
+
+    # Policy evidence is always relevant as the final root-cause reference.
+    for entry in decision_evidence:
+        if isinstance(entry, str) and entry.startswith("policy:"):
+            evidence.append(entry)
+            break
+
+    evidence = [entry for entry in dict.fromkeys(evidence) if _is_valid_evidence(entry, facts)]
+    return evidence[:10]
+
+
 def verify_and_serialize(
     case: Any,
     facts: Any,
@@ -68,15 +106,20 @@ def verify_and_serialize(
     seller_ids = list(_value(order_seller, "seller_ids", []) or [])[:5]
     payment_ids = list(_value(payment, "payment_ids", []) or [])[:5]
     primary_issue = _value(decision, "primary_issue", "unsupported_late_claim")
-    evidence = list(_value(order_seller, "evidence", []) or [])
-    evidence += list(_value(delivery, "evidence", []) or [])
-    evidence += list(_value(payment, "evidence", []) or [])
-    evidence += list(_value(decision, "evidence", []) or [])
-    evidence = [entry for entry in dict.fromkeys(evidence) if _is_valid_evidence(entry, facts)][:10]
+    delivery_late_sellers = list(_value(delivery, "late_seller_ids", []) or [])[:5]
+    decision_evidence = list(_value(decision, "evidence", []) or [])
 
-    if order_id and f"order:{order_id}" not in evidence:
-        evidence.insert(0, f"order:{order_id}")
-    evidence = [entry for entry in evidence if _is_valid_evidence(entry, facts)][:10]
+    evidence = _select_evidence_ids(
+        primary_issue,
+        order_id,
+        item_ids,
+        seller_ids,
+        delivery_late_sellers,
+        payment_ids,
+        decision_evidence,
+        facts,
+    )
+
     item_total = _money(_value(payment, "item_total", sum(float(_value(item, "price", 0.0) or 0.0) for item in items)))
     freight_total = _money(_value(payment, "freight_total", sum(float(_value(item, "freight_value", 0.0) or 0.0) for item in items)))
     payment_total = _money(_value(payment, "payment_total", 0.0))
